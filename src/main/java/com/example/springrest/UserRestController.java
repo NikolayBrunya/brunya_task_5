@@ -5,6 +5,7 @@ import com.example.springrest.exceptions.UserNotFoundException;
 import com.example.springrest.exceptions.UserNotRightsException;
 import com.example.springrest.service.RepositoryStubService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,7 +45,7 @@ public class UserRestController {
 
     //5
     @PostMapping("/users")
-    public User createUser(/* 6 */@RequestBody User newUser, HttpServletRequest request) {
+    public User createUser(/* 6 */@RequestBody User newUser, HttpServletRequest request) throws UserNotRightsException {
         if (request.isUserInRole("ROLE2") == false) throw new UserNotRightsException();
         return repositoryService.saveUser(newUser);
     }
@@ -52,8 +53,13 @@ public class UserRestController {
     //7
     @PutMapping("/users")
     public User updateUser(/* 8 */@RequestParam(name = "id") Long id,
-            /* 9 */@RequestBody User updatedUser, HttpServletRequest request) {
-        if (request.isUserInRole("ROLE2") == false) throw new UserNotRightsException();
+            /* 9 */@RequestBody User updatedUser) throws UserNotRightsException {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean hasUserRole = authentication.getAuthorities().stream()
+                .anyMatch(r -> r.getAuthority().equals("ROLE2"));
+        if (hasUserRole == false) throw new UserNotRightsException();
+
         User userToUpdate = repositoryService.findUserById(id);
         if (userToUpdate != null) {
             userToUpdate.setFirstName(updatedUser.getFirstName());
@@ -69,7 +75,7 @@ public class UserRestController {
 
     // 10
     @DeleteMapping("/users")
-    public void deleteUser(/* 11 */ @RequestParam(name = "id") Long id, HttpServletRequest request) {
+    public void deleteUser(/* 11 */ @RequestParam(name = "id") Long id, HttpServletRequest request) throws UserNotRightsException {
         if (request.isUserInRole("ROLE2") == false) throw new UserNotRightsException();
         repositoryService.deleteById(id);
     }
